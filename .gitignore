@@ -2,3 +2,4 @@ scratch.py
 tmp/
 MNIST-data/
 pcap_list.txt
+cache/
