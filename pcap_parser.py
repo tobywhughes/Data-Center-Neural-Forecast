@@ -112,13 +112,18 @@ def flatten_list(packet_lists):
         packet_list += current_list
     return  sorted(packet_list)
 
-def show_time_series(packet_list):
+def show_time_series(packet_list, subsets):
     "Plotting Data"
     times = [second[0] for second in packet_list]
     counts =[count[1] for count in packet_list]
     plt.plot(times, counts)
     plt.axis([0, len(times), 0, (max(counts) * 1.1)])
     plt.show()
+    subset_times_list = [[second[0] for second in subset] for subset in subsets]
+    subset_count_list = [[count[1] for count in subset] for subset in subsets]
+    for i in range(3):
+        plt.plot(subset_times_list[i*150], subset_count_list[i*150])
+        plt.show()
 
 def check_for_time_series_cache(filename_list):
     print('Checking for time series cache...')
@@ -149,6 +154,15 @@ def generate_time_series(packet_lists):
     packet_times = move_to_zero(convert_to_seconds_series(packet_list))
     return zero_pad(packet_times)
 
+def parse_subsets(packet_list, window_size):
+    print("Parsing subsets...")
+    current_index = 0
+    subset_list = []
+    while (current_index + window_size) <= len(packet_list):
+        subset_list.append(move_to_zero(packet_list[current_index:(current_index + window_size)]))
+        current_index += 1
+    return subset_list
+
 if __name__ == "__main__":
     name_list = read_list_of_names("./pcap_list.txt")
     padded_packet_times = []
@@ -158,4 +172,6 @@ if __name__ == "__main__":
         packet_lists = run_pcap_imports(name_list)
         padded_packet_times = generate_time_series(packet_lists)
         cache_time_series(padded_packet_times, name_list)
-    show_time_series(padded_packet_times)
+    subset_list = parse_subsets(padded_packet_times, 240 + 64)
+    output_series_by_line(subset_list[0])
+    show_time_series(padded_packet_times, subset_list)
