@@ -113,7 +113,7 @@ def flatten_list(packet_lists):
     return  sorted(packet_list)
 
 def show_time_series(packet_list, subsets):
-    "Plotting Data"
+    print("Plotting Data")
     times = [second[0] for second in packet_list]
     counts =[count[1] for count in packet_list]
     plt.plot(times, counts)
@@ -129,13 +129,15 @@ def check_for_time_series_cache(filename_list):
     print('Checking for time series cache...')
     time_series_pname = '.\\cache\\series_cache\\series.p'
     filename_list_pname = '.\\cache\\series_cache\\filenames.p'
+    subset_pname = '.\\cache\\series_cache\\subset.p'
     os.makedirs(os.path.dirname(time_series_pname), exist_ok=True)
-    if os.path.isfile(time_series_pname) and os.path.isfile(filename_list_pname):
+    if os.path.isfile(time_series_pname) and os.path.isfile(filename_list_pname) and os.path.isfile(subset_pname):
         if pickle.load(open(filename_list_pname, 'rb')) == filename_list:
             return True
     return False
 
 def read_time_series_cache():
+    print("Reading time series cache...")
     time_series_pname = '.\\cache\\series_cache\\series.p'
     return pickle.load(open(time_series_pname, 'rb'))
 
@@ -149,7 +151,20 @@ def cache_time_series(time_series, filename_list):
     pickle.dump(filename_list, open(filename_list_pname, 'wb'))
     print("Cached in ", os.path.abspath(filename_list_pname))
 
+def cache_subsets(subset_list):
+    print("Caching subseries...")
+    subset_pname = '.\\cache\\series_cache\\subset.p'
+    os.makedirs(os.path.dirname(subset_pname), exist_ok=True)
+    pickle.dump(subset_list, open(subset_pname, 'wb'))
+    print("Cached in ", os.path.abspath(subset_pname))
+
+def read_subset_cache():
+    print("Reading subset cache...")
+    subset_pname = '.\\cache\\series_cache\\subset.p'
+    return pickle.load(open(subset_pname, 'rb'))
+
 def generate_time_series(packet_lists):
+    print("Generating time series...")
     packet_list = flatten_list(packet_lists)
     packet_times = move_to_zero(convert_to_seconds_series(packet_list))
     return zero_pad(packet_times)
@@ -166,12 +181,14 @@ def parse_subsets(packet_list, window_size):
 if __name__ == "__main__":
     name_list = read_list_of_names("./pcap_list.txt")
     padded_packet_times = []
+    subset_list = []
     if check_for_time_series_cache(name_list):
         padded_packet_times = read_time_series_cache()
+        subset_list = read_subset_cache()
     else:
         packet_lists = run_pcap_imports(name_list)
         padded_packet_times = generate_time_series(packet_lists)
         cache_time_series(padded_packet_times, name_list)
-    subset_list = parse_subsets(padded_packet_times, 240 + 64)
-    output_series_by_line(subset_list[0])
+        subset_list = parse_subsets(padded_packet_times, 240 + 64)
+        cache_subsets(subset_list)
     show_time_series(padded_packet_times, subset_list)
