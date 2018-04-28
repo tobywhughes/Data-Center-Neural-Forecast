@@ -49,6 +49,7 @@ def read_pcap_cache(filename):
 
 
 def convert_to_seconds_series(packet_list):
+    print("Converting pcap series to time series....")
     current_packet_count = 0
     last_packet_time = 0
     packet_times = []
@@ -69,21 +70,19 @@ def convert_to_seconds_series(packet_list):
     return packet_times
 
 def move_to_zero(packet_list):
+    "Converting time series to 0 offset..."
     converted_list = []
     start_time = packet_list[0][0]
     for packet in packet_list:
         converted_list.append((packet[0] - start_time, packet[1]))
     return converted_list
 
-def zero_pad(packet_list, end_time):
-    if (end_time) < len(packet_list):
-        print("Warning - End time less than size of list.")
+def zero_pad(packet_list):
+    print("Zero padding time series....")
     i = 0
-    while i < end_time:
-        if len(packet_times) <= i:
-            packet_times.insert(i, (i, 0))
-        elif packet_times[i][0] != i:
-            packet_times.insert(i, (i, 0))
+    while i < packet_list[-1][0]:
+        if packet_list[i][0] != i:
+            packet_list.insert(i, (i, 0))
         i += 1
     return packet_list
 
@@ -93,11 +92,11 @@ def read_list_of_names(filename):
     for line in f:
         if line[0] != '#':
             filename_list.append(line.rstrip())
-    return filename_list
     f.close()
+    return filename_list
 
 def output_series_by_line(packet_list):
-    for times in packet_times:
+    for times in packet_list:
         print("Time: ", times[0], "  Count: ", times[1])
 
 def run_pcap_imports(filename_list):
@@ -107,23 +106,56 @@ def run_pcap_imports(filename_list):
     return packet_lists
 
 def flatten_list(packet_lists):
+    print("Concatenating imports...")
     packet_list = []
     for current_list in packet_lists:
         packet_list += current_list
     return  sorted(packet_list)
 
 def show_time_series(packet_list):
+    "Plotting Data"
     times = [second[0] for second in packet_list]
     counts =[count[1] for count in packet_list]
     plt.plot(times, counts)
     plt.axis([0, len(times), 0, (max(counts) * 1.1)])
     plt.show()
 
-if __name__ == "__main__":
-    name_list = read_list_of_names("./pcap_list.txt")
-    packet_lists = run_pcap_imports(name_list)
+def check_for_time_series_cache(filename_list):
+    print('Checking for time series cache...')
+    time_series_pname = '.\\cache\\series_cache\\series.p'
+    filename_list_pname = '.\\cache\\series_cache\\filenames.p'
+    os.makedirs(os.path.dirname(time_series_pname), exist_ok=True)
+    if os.path.isfile(time_series_pname) and os.path.isfile(filename_list_pname):
+        if pickle.load(open(filename_list_pname, 'rb')) == filename_list:
+            return True
+    return False
+
+def read_time_series_cache():
+    time_series_pname = '.\\cache\\series_cache\\series.p'
+    return pickle.load(open(time_series_pname, 'rb'))
+
+def cache_time_series(time_series, filename_list):
+    print("Caching time series...")
+    time_series_pname = '.\\cache\\series_cache\\series.p'
+    filename_list_pname = '.\\cache\\series_cache\\filenames.p'
+    os.makedirs(os.path.dirname(time_series_pname), exist_ok=True)
+    pickle.dump(time_series, open(time_series_pname, 'wb'))
+    print("Cached in ", os.path.abspath(time_series_pname))
+    pickle.dump(filename_list, open(filename_list_pname, 'wb'))
+    print("Cached in ", os.path.abspath(filename_list_pname))
+
+def generate_time_series(packet_lists):
     packet_list = flatten_list(packet_lists)
     packet_times = move_to_zero(convert_to_seconds_series(packet_list))
-    padded_packet_times = zero_pad(packet_times, 180)
-    #output_series_by_line(padded_packet_times)
+    return zero_pad(packet_times)
+
+if __name__ == "__main__":
+    name_list = read_list_of_names("./pcap_list.txt")
+    padded_packet_times = []
+    if check_for_time_series_cache(name_list):
+        padded_packet_times = read_time_series_cache()
+    else:
+        packet_lists = run_pcap_imports(name_list)
+        padded_packet_times = generate_time_series(packet_lists)
+        cache_time_series(padded_packet_times, name_list)
     show_time_series(padded_packet_times)
