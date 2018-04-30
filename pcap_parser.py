@@ -101,16 +101,23 @@ def output_series_by_line(packet_list):
 
 def run_pcap_imports(filename_list):
     packet_lists = []
+    count = 0
     for filename in filename_list:
+        print("Parsing File #" + str(count + 1) +" out of " + str(len(filename_list)))
         packet_lists.append(import_pcap_list(filename))
+        count += 1
     return packet_lists
 
 def flatten_list(packet_lists):
     print("Concatenating imports...")
     packet_list = []
+    count = 0
     for current_list in packet_lists:
+        print("Concatenating List #" + str((count + 1)) + " out of " + str(len(packet_lists)))
         packet_list += current_list
-    return  sorted(packet_list)
+        count += 1
+    print("Sorting Imports")
+    return packet_list
 
 def show_time_series(packet_list, subsets):
     print("Plotting Data")
