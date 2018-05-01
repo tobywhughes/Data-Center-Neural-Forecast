@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 from sklearn.utils import shuffle
 import math
+import os
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -53,52 +54,70 @@ def channel_split(train, window = 60):
 
 train, test = read_subset_series('.\\subsets\\20100121subset.p', '.\\subsets\\20100225subset.p')
 train, train_labels = generate_labels(train, 64)
-test_input, test_labels = generate_labels(test, 1)
+test_input, test_labels = generate_labels(test, 64)
 
-#train, train_validation, train_labels, labels_validation = validation_split(train_input, train_labels)
+train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 
+os.makedirs('.\\save', exist_ok=True)
 
+for i in range(1):
+    #Hyperparameters
+    batch_size = 50
+    seq_len = 60
+    learning_rate = 0.0001
+    epochs = 100
 
-#Hyperparameters
-batch_size = 50
-seq_len = 60
-learning_rate_ = 0.0001
-epochs = 1000
+    n_channels = 3
 
-n_channels = 3
+    graph = tf.Graph()
 
-graph = tf.Graph()
+    #Placeholders
 
-#Placeholders
+    with graph.as_default():
+        inputs = tf.placeholder(tf.float32, [None, seq_len, n_channels], name = 'inputs')
+        labels = tf.placeholder(tf.float32, name = 'labels')
+        keep_prob = tf.placeholder(tf.float32, name = 'keep')
+        learning_rate_ = tf.placeholder(tf.float32, name = 'learning_rate')
 
-with graph.as_default():
-    inputs = tf.placeholder(tf.float32, [None, seq_len, n_channels], name = 'inputs')
-    labels = tf.placeholder(tf.float32, name = 'labels')
-    keep_prob = tf.placeholder(tf.float32, name = 'keep')
-    learning_rate = tf.placeholder(tf.float32, name = 'learning_rate')
+        conv = tf.layers.conv1d(inputs = inputs, filters = 30, kernel_size = 15, strides = 1, padding = 'same', activation = tf.nn.relu)
+        flat = tf.reshape(conv, [-1, 60 * 30])
+        dense = tf.layers.dense(inputs = flat, units = 60, activation=tf.nn.relu)
+        out = tf.layers.dense(inputs=dense, units = 1, activation=tf.nn.relu)
+        cost = tf.reduce_mean(tf.squared_difference(out, labels))
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
+        saver = tf.train.Saver()
 
-    conv = tf.layers.conv1d(inputs = inputs, filters = 30, kernel_size = 15, strides = 1, padding = 'same', activation = tf.nn.relu)
-    conv2 = tf.layers.conv1d(inputs = conv, filters = 60, kernel_size = 15, strides = 1, padding = 'same', activation = tf.nn.relu)
-    conv3 = tf.layers.conv1d(inputs = conv2, filters = 30, kernel_size = 15, strides = 1, padding = 'same', activation = tf.nn.relu)
-    flat = tf.reshape(conv3, [-1, 60 * 30])
-    dense = tf.layers.dense(inputs = flat, units = 60, activation=tf.nn.relu)
-    dense2 = tf.layers.dense(inputs = dense, units = 60, activation=tf.nn.relu)
-    dense3 = tf.layers.dense(inputs = dense2, units = 60, activation=tf.nn.relu)
-    out = tf.layers.dense(inputs=dense3, units = 1, activation=tf.nn.relu)
-    cost = tf.reduce_mean(tf.squared_difference(out, labels))
-    optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
-    
-with tf.Session(graph=graph) as sess:
-    sess.run(tf.global_variables_initializer())
-    count = 0
+    with tf.Session(graph=graph) as sess:
+        sess.run(tf.global_variables_initializer())
+        count = 0
 
-    for e in range(epochs):
-        print("Epoch #" + str(e))
-        for train_ , labels_ in batches(train, train_labels, batch_size):
-            #train_ = [[[1,2,3,4],[1,2,3,4],[1,2,3,4]],[[1,2,3,4],[1,2,3,4],[1,2,3,4]]]
+        for e in range(epochs):
+            print("Epoch #" + str(e))
+            for train_ , labels_ in batches(train, train_labels, batch_size):
+                #train_ = [[[1,2,3,4],[1,2,3,4],[1,2,3,4]],[[1,2,3,4],[1,2,3,4],[1,2,3,4]]]
+                train_ = [channel_split(batch, 60) for batch in train_]
+                feed_ = {inputs: train_, labels: labels_, keep_prob: 0.5, learning_rate_: learning_rate}
+                loss, _ = sess.run([cost, optimizer], feed_dict = feed_)
+                if count % 10 == 0:
+                    print("Loss: {:6f}".format(loss),"on #" + str(count) )
+                if count % 20 == 0:
+                    val_loss = []
+                    for validation_train, validation_labels in batches(train_validation, labels_validation, batch_size):
+                        validation_train = [channel_split(batch, 60) for batch in validation_train]
+                        validation_feed = {inputs: validation_train, labels: validation_labels, keep_prob: 1.0}
+                        validation_loss, _ = sess.run([cost, optimizer], feed_dict = validation_feed)
+                        val_loss.append(validation_loss)
+                    print("Validation Loss: {:6f}".format(np.mean(val_loss)))
+                
+                count += 1
+        saver.save(sess, 'save/cnn-mr.ckpt')
+
+    with tf.Session(graph=graph) as sess:
+        saver.restore(sess, tf.train.latest_checkpoint('save'))
+        test_loss = []
+        for train_, labels_ in batches(test_input, test_labels, batch_size):
             train_ = [channel_split(batch, 60) for batch in train_]
-            feed_ = {inputs: train_, labels: labels_, keep_prob: 0.5, learning_rate: learning_rate_}
-            loss, _ = sess.run([cost, optimizer], feed_dict = feed_)
-            if count % 20 == 0:
-                print("Loss: {:6f}".format(loss),"on #" + str(count) )
-            count += 1
+            feed = {inputs: train_, labels: labels_, keep_prob: 1}
+            loss = sess.run(cost, feed_dict=feed)
+            test_loss.append(loss)
+        print("Test accuracy: {:.6f}".format(np.mean(test_loss)))

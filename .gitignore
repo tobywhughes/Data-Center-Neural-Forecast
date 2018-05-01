@@ -4,3 +4,4 @@ MNIST-data/
 pcap_list.txt
 cache/
 subsets/
+save/
