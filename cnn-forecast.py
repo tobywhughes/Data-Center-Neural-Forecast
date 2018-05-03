@@ -62,10 +62,10 @@ os.makedirs('.\\save', exist_ok=True)
 
 for i in range(1):
     #Hyperparameters
-    batch_size = 50
+    batch_size = 150
     seq_len = 60
-    learning_rate = 0.0001
-    epochs = 100
+    learning_rate = 0.005
+    epochs = 10
 
     n_channels = 3
 
