@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
+from keras.layers import Dropout
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
@@ -27,6 +28,11 @@ def validation_split(train, labels):
     labels_ret = labels[:math.floor(len(train) * .8)]
     labels_valid = labels[math.floor(len(train) * .8):]
     return train_ret, train_valid, labels_ret, labels_valid
+
+def shuffle_sets(train, labels):
+    shuffle_index = range(len(train))
+    train, labels = shuffle(train, labels)
+    return train, labels
 
 def batches(train, labels, size):
     num = len(train) // size
@@ -93,22 +99,20 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-train, train_labels = generate_labels(train, 64)
-test_input, test_labels = generate_labels(test, 64)
-
-train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
+train, train_labels = generate_labels(train, 1)
+test_input, test_labels = generate_labels(test, 1)
+#train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
-train, test_input, train_validation = feed_reshape([train, test_input, train_validation])
+train, test_input = feed_reshape([train, test_input])
 
 #train_labels, test_labels, labels_validation = feed_reshape([train_labels, test_labels, labels_validation])
 
 model = Sequential()
-model.add(LSTM(4, input_shape=(240, 1)))
-model.add(Dense(5))
+model.add(LSTM(50, input_shape=(240, 1)))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=200, batch_size=100, verbose=2)
+model.fit(train, train_labels, epochs=50, batch_size=10, validation_split=0.1,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)
