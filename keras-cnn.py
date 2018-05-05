@@ -3,8 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Dropout
+from keras.layers import Conv1D
+from keras import optimizers
+from keras.layers import Dropout, Flatten
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
@@ -115,21 +116,25 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-train, train_labels = generate_labels(train, 64)
-test_input, test_labels = generate_labels(test, 64)
+train, train_labels = generate_labels(train, 1)
+test_input, test_labels = generate_labels(test, 1)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
-train, test_input = feed_reshape([train, test_input])
 
+train, test_input = feed_reshape([train, test_input])
+print(train.shape)
 #train_labels, test_labels, labels_validation = feed_reshape([train_labels, test_labels, labels_validation])
 
 model = Sequential()
-model.add(LSTM(100, input_shape=(60, 3)))
-model.add(Dense(10))
-model.add(Dense(1))
+#model.add(LSTM(10, input_shape=(240, 1)))
+model.add(Conv1D(40,5, activation='relu', input_shape = (60,3), padding='same'))
+model.add(Flatten())
+model.add(Dense(10, activation='relu'))
+#model.add(Dense(30, activation='relu'))
+model.add(Dense(1, activation='relu'))
 model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=100, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+model.fit(train, train_labels, epochs=2000, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)
