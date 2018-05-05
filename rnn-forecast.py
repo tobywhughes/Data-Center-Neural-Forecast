@@ -40,12 +40,14 @@ def batches(train, labels, size):
     for batch in range(0, len(train), size):
         yield train[batch: batch+size], labels[batch:batch+size]
 
-def reshape_input(series, length = 240, features=1):
+def reshape_input(series, length = 60, features=3):
     num_samples = len(series)
+    for i in range(num_samples):
+        series[i] = channel_split(series[i])
     series = np.array(series)
     return series.reshape(num_samples, length, features)
 
-def feed_reshape(series_list, length=240, features=1):
+def feed_reshape(series_list, length=60, features=3):
     new_series = []
     for series in series_list:
         new_series.append(reshape_input(series, length, features))
@@ -84,6 +86,20 @@ def parse_subsets(packet_list, window_size):
         current_index += 1
     return subset_list
 
+def channel_split(train, window = 60):
+    channel1 = train[len(train) - 60:]
+    channel2_ = train[len(train) - 120:]
+    channel3_ = train
+    channel2 = []
+    channel3 = []
+    for i in range(len(channel1)):
+        channel2.append(np.mean([channel2_[(i*2)], channel2_[(i * 2) + 1]]))
+        channel3.append(np.mean([channel3_[i * 4], channel3_[(i * 4) + 1], channel3_[(i * 4) + 2], channel3_[(i * 4) + 3]]))
+    train = []
+    for i in range(len(channel1)):
+        train.append([channel1[i], channel2[i], channel3[i]])
+    return train
+
 scaler = MinMaxScaler(feature_range=(0, 1))
 train, test = read_subset_series('.\\subsets\\20100121subset.p', '.\\subsets\\20100225subset.p')
 train = extract_times(train)
@@ -109,6 +125,7 @@ train, test_input = feed_reshape([train, test_input])
 #train_labels, test_labels, labels_validation = feed_reshape([train_labels, test_labels, labels_validation])
 
 model = Sequential()
+<<<<<<< HEAD
 model.add(LSTM(20, input_shape=(240, 1), return_sequences=True))
 model.add(Dropout(.5))
 model.add(LSTM(10, input_shape=(240, 1)))
@@ -118,6 +135,13 @@ model.add(Dropout(.5))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
 model.fit(train, train_labels, epochs=700, batch_size=10, validation_split=0.1,verbose=2, shuffle=True)
+=======
+model.add(LSTM(100, input_shape=(60, 3)))
+model.add(Dense(10))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+model.fit(train, train_labels, epochs=100, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+>>>>>>> 6136b5f505539c7753141142c36e00535e58db33
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)
@@ -134,7 +158,11 @@ plt.plot(range(len(test_predict[:,0])), test_predict[:,0])
 plt.show()
 plt.plot(range(len(train_labels[0])), train_labels[0])
 plt.plot(range(len(train_predict[:,0])), train_predict[:,0])
+<<<<<<< HEAD
 plt.show()
 
 #Train Score: 4212910.00 MSE
 #Test Score: 268215437.50 MSE
+=======
+plt.show()
+>>>>>>> 6136b5f505539c7753141142c36e00535e58db33

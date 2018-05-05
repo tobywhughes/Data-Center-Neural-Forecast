@@ -3,8 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense
+<<<<<<< HEAD
 from keras.layers import LSTM
 from keras.layers import Dropout
+=======
+from keras.layers import Conv1D
+from keras import optimizers
+from keras.layers import Dropout, Flatten
+>>>>>>> 6136b5f505539c7753141142c36e00535e58db33
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
@@ -40,12 +46,23 @@ def batches(train, labels, size):
     for batch in range(0, len(train), size):
         yield train[batch: batch+size], labels[batch:batch+size]
 
+<<<<<<< HEAD
 def reshape_input(series, length = 240, features=1):
     num_samples = len(series)
     series = np.array(series)
     return series.reshape(num_samples, length, features)
 
 def feed_reshape(series_list, length=240, features=1):
+=======
+def reshape_input(series, length = 60, features=3):
+    num_samples = len(series)
+    for i in range(num_samples):
+        series[i] = channel_split(series[i])
+    series = np.array(series)
+    return series.reshape(num_samples, length, features)
+
+def feed_reshape(series_list, length=60, features=3):
+>>>>>>> 6136b5f505539c7753141142c36e00535e58db33
     new_series = []
     for series in series_list:
         new_series.append(reshape_input(series, length, features))
@@ -113,9 +130,48 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
+<<<<<<< HEAD
 train, train_labels = generate_labels(train, 64)
 test_input, test_labels = generate_labels(test, 64)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
 train, test_input = feed_reshape([train, test_input])
+=======
+train, train_labels = generate_labels(train, 1)
+test_input, test_labels = generate_labels(test, 1)
+#train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
+#train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
+
+
+train, test_input = feed_reshape([train, test_input])
+print(train.shape)
+#train_labels, test_labels, labels_validation = feed_reshape([train_labels, test_labels, labels_validation])
+
+model = Sequential()
+#model.add(LSTM(10, input_shape=(240, 1)))
+model.add(Conv1D(40,5, activation='relu', input_shape = (60,3), padding='same'))
+model.add(Flatten())
+model.add(Dense(10, activation='relu'))
+#model.add(Dense(30, activation='relu'))
+model.add(Dense(1, activation='relu'))
+model.compile(loss='mean_squared_error', optimizer='adam')
+model.fit(train, train_labels, epochs=2000, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+train_predict = model.predict(train)
+test_predict = model.predict(test_input)
+train_predict = scaler.inverse_transform(train_predict)
+train_labels = scaler.inverse_transform([train_labels])
+test_predict = scaler.inverse_transform(test_predict)
+test_labels = scaler.inverse_transform([test_labels])
+trainScore = mean_squared_error(train_labels[0], train_predict[:,0])
+print('Train Score: %.2f MSE' % (trainScore))
+testScore = mean_squared_error(test_labels[0], test_predict[:,0])
+print('Test Score: %.2f MSE' % (testScore))
+
+plt.plot(range(len(test_labels[0])), test_labels[0])
+plt.plot(range(len(test_predict[:,0])), test_predict[:,0])
+plt.show()
+plt.plot(range(len(train_labels[0])), train_labels[0])
+plt.plot(range(len(train_predict[:,0])), train_predict[:,0])
+plt.show()
+>>>>>>> 6136b5f505539c7753141142c36e00535e58db33
