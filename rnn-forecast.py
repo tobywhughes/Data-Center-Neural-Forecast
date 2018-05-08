@@ -115,8 +115,8 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-train, train_labels = generate_labels(train, 64)
-test_input, test_labels = generate_labels(test, 64)
+train, train_labels = generate_labels(train,1)
+test_input, test_labels = generate_labels(test, 1)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
@@ -126,10 +126,11 @@ train, test_input = feed_reshape([train, test_input])
 
 model = Sequential()
 model.add(LSTM(100, input_shape=(60, 3)))
+model.add(Dropout(.5))
 model.add(Dense(10))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=100, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+model.fit(train, train_labels, epochs=400, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)
@@ -147,3 +148,12 @@ plt.show()
 plt.plot(range(len(train_labels[0])), train_labels[0])
 plt.plot(range(len(train_predict[:,0])), train_predict[:,0])
 plt.show()
+
+# Train Score: 4896332.05 MSE
+# Test Score: 40122089.98 MSE
+
+# Train Score: 6923445.02 MSE
+# Test Score: 23426104.37 MSE
+
+# Train Score: 4050108.11 MSE
+# Test Score: 2322869.67 MSE
