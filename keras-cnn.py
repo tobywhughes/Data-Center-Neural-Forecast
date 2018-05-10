@@ -3,14 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense
-<<<<<<< HEAD
-from keras.layers import LSTM
-from keras.layers import Dropout
-=======
 from keras.layers import Conv1D
 from keras import optimizers
 from keras.layers import Dropout, Flatten
->>>>>>> 6136b5f505539c7753141142c36e00535e58db33
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
@@ -46,14 +41,6 @@ def batches(train, labels, size):
     for batch in range(0, len(train), size):
         yield train[batch: batch+size], labels[batch:batch+size]
 
-<<<<<<< HEAD
-def reshape_input(series, length = 240, features=1):
-    num_samples = len(series)
-    series = np.array(series)
-    return series.reshape(num_samples, length, features)
-
-def feed_reshape(series_list, length=240, features=1):
-=======
 def reshape_input(series, length = 60, features=3):
     num_samples = len(series)
     for i in range(num_samples):
@@ -62,7 +49,6 @@ def reshape_input(series, length = 60, features=3):
     return series.reshape(num_samples, length, features)
 
 def feed_reshape(series_list, length=60, features=3):
->>>>>>> 6136b5f505539c7753141142c36e00535e58db33
     new_series = []
     for series in series_list:
         new_series.append(reshape_input(series, length, features))
