@@ -11,7 +11,7 @@ from sklearn.utils import shuffle
 import math, pickle, os
 
 
-np.random.seed(1)
+np.random.seed()
 
 
 def read_subset_series(train_name, test_name):
@@ -102,6 +102,9 @@ def channel_split(train, window = 60):
 
 scaler = MinMaxScaler(feature_range=(0, 1))
 train, test = read_subset_series('.\\subsets\\20100121subset.p', '.\\subsets\\20100225subset.p')
+train2, test2 = read_subset_series('.\\subsets\\20100325subsets.p', '.\\subsets\\20100414subset.p')
+train = train + test + train2
+test = test2
 train = extract_times(train)
 train = temp_unsplit(train)
 test = extract_times(test)
@@ -115,8 +118,9 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-train, train_labels = generate_labels(train,1)
-test_input, test_labels = generate_labels(test, 1)
+window_ = 16
+train, train_labels = generate_labels(train, window_)
+test_input, test_labels = generate_labels(test, window_)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
@@ -130,7 +134,7 @@ model.add(Dropout(.5))
 model.add(Dense(10))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=400, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+model.fit(train, train_labels, epochs=500, batch_size=200, validation_split=0.35,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)

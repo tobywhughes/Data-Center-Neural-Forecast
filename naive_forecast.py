@@ -36,7 +36,7 @@ def mean_squared_error_by_window(series, window):
     sq_error = squared_error(predictions, labels)
     return np.mean(sq_error)
 
-series = read_subset_series('.\\subsets\\20100225subset.p')
+series = read_subset_series('.\\subsets\\20100414subset.p')
 windows = [2 ** window for window in range(7)]
 mse_values = [mean_squared_error_by_window(series, window) for window in windows]
 print(mse_values)

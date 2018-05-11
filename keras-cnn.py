@@ -10,9 +10,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
 import math, pickle, os
+from keras import regularizers
 
 
-np.random.seed(1)
+np.random.seed()
 
 
 def read_subset_series(train_name, test_name):
@@ -103,6 +104,9 @@ def channel_split(train, window = 60):
 
 scaler = MinMaxScaler(feature_range=(0, 1))
 train, test = read_subset_series('.\\subsets\\20100121subset.p', '.\\subsets\\20100225subset.p')
+train2, test2 = read_subset_series('.\\subsets\\20100325subsets.p', '.\\subsets\\20100414subset.p')
+train = train + test + train2
+test = test2
 train = extract_times(train)
 train = temp_unsplit(train)
 test = extract_times(test)
@@ -115,9 +119,9 @@ test = fit[len_t:]
 train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
-
-train, train_labels = generate_labels(train, 1)
-test_input, test_labels = generate_labels(test, 1)
+window_ = 1
+train, train_labels = generate_labels(train, window_)
+test_input, test_labels = generate_labels(test, window_)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
@@ -128,13 +132,14 @@ print(train.shape)
 
 model = Sequential()
 #model.add(LSTM(10, input_shape=(240, 1)))
-model.add(Conv1D(40,5, activation='relu', input_shape = (60,3), padding='same'))
+model.add(Conv1D(15,10, activation='relu', input_shape = (60,3), padding='same', kernel_initializer='he_uniform', kernel_regularizer=regularizers.l2(.0012140392503791908)))
 model.add(Flatten())
-model.add(Dense(10, activation='relu'))
+model.add(Dense(20, activation='relu', kernel_regularizer=regularizers.l2(.0012140392503791908)))
 #model.add(Dense(30, activation='relu'))
 model.add(Dense(1, activation='relu'))
-model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=2000, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
+adam_ = optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
+model.compile(loss='mean_squared_error', optimizer=adam_)
+model.fit(train, train_labels, epochs=1000, batch_size=200, validation_split=0.35,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)
