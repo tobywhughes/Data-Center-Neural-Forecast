@@ -118,7 +118,7 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-window_ = 16
+window_ = 2
 train, train_labels = generate_labels(train, window_)
 test_input, test_labels = generate_labels(test, window_)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
@@ -134,7 +134,7 @@ model.add(Dropout(.5))
 model.add(Dense(10))
 model.add(Dense(1))
 model.compile(loss='mean_squared_error', optimizer='adam')
-model.fit(train, train_labels, epochs=500, batch_size=200, validation_split=0.35,verbose=2, shuffle=True)
+model.fit(train, train_labels, epochs=500, batch_size=200, validation_split=0.1,verbose=2, shuffle=True)
 train_predict = model.predict(train)
 test_predict = model.predict(test_input)
 train_predict = scaler.inverse_transform(train_predict)

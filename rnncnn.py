@@ -13,9 +13,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.utils import shuffle
 import math, pickle, os
+from keras import regularizers
 
 
-np.random.seed(1)
+np.random.seed()
 
 
 def read_subset_series(train_name, test_name):
@@ -106,6 +107,9 @@ def channel_split(train, window = 60):
 
 scaler = MinMaxScaler(feature_range=(0, 1))
 train, test = read_subset_series('.\\subsets\\20100121subset.p', '.\\subsets\\20100225subset.p')
+train2, test2 = read_subset_series('.\\subsets\\20100325subsets.p', '.\\subsets\\20100414subset.p')
+train = train + test + train2
+test = test2
 train = extract_times(train)
 train = temp_unsplit(train)
 test = extract_times(test)
@@ -119,8 +123,9 @@ train = parse_subsets(train, 240+64)
 test = parse_subsets(test, 240+64)
 
 
-train, train_labels = generate_labels(train, 16)
-test_input, test_labels = generate_labels(test, 16)
+window_ = 16
+train, train_labels = generate_labels(train, window_)
+test_input, test_labels = generate_labels(test, window_)
 #train, train_validation, train_labels, labels_validation = validation_split(train, train_labels)
 #train, train_validation, test_input = (scaler.fit_transform(entry) for entry in [train, train_validation, test_input])
 
@@ -131,13 +136,15 @@ print(train.shape)
 
 #model.add(LSTM(10, input_shape=(240, 1)))
 input_ = Input(shape=(60,3))
-conv = Conv1D(40,5, activation='relu', input_shape = (60,3), padding='same')(input_)
+conv = Conv1D(15,10, activation='relu', input_shape = (60,3), padding='same', kernel_initializer='he_uniform', kernel_regularizer=regularizers.l2(.00000002477))(input_)
 flat_conv = Flatten()(conv)
 lstm = LSTM(20, input_shape=(60, 3))(input_)
-dense_conv = Dense(10, activation='relu')(flat_conv)
-flat = concatenate([dense_conv, lstm], axis=1)
+lstm_drop = Dropout(.5)(lstm)
+dense_conv = Dense(10, activation='relu', kernel_regularizer=regularizers.l2(.00000003619))(flat_conv)
+dense_lstm = Dense(10, activation='relu', kernel_regularizer=regularizers.l2(.00000003619))(lstm_drop)
+flat = concatenate([dense_conv, dense_lstm], axis=1)
 #flat = Flatten()(concat)
-dense = Dense(10, activation='relu')(flat)
+dense = Dense(10, activation='relu', kernel_regularizer=regularizers.l2(.00000003619))(flat)
 out = Dense(1, activation='relu')(dense)
 model = Model(inputs=input_, outputs=out)
 #model.add(Conv1D(30,15, activation='relu', input_shape = (60,3), padding='same'))
